@@ -1,28 +1,29 @@
+org: pithesh
+app: product-service
 service: product-service
-frameworkVersion: '2'
-variablesResolutionMode: 20210219
+frameworkVersion: '3'
 
 provider:
   name: aws
-  runtime: nodejs12.x
-  stage: ${opt:stage, 'dev'}
+  runtime: nodejs18.x
   region: us-east-1
-  environment:
-    ENV_STAGE: ${opt:stage, 'dev'}
-    PGHOST: ${self:custom.dotenvVars.PGHOST, env:PGHOST, ''}
-    PGUSER: ${self:custom.dotenvVars.PGUSER, env:PGUSER, ''}
-    PGDATABASE: ${self:custom.dotenvVars.PGDATABASE, env:PGDATABASE, ''}
-    PGPASSWORD: ${self:custom.dotenvVars.PGPASSWORD, env:PGPASSWORD, ''}
-    PGPORT: ${self:custom.dotenvVars.PGPORT, env:PGPORT, ''}
+  httpApi:
+    cors: true
+
 
 plugins:
+  - serverless-auto-swagger
   - serverless-webpack
+  - serverless-offline
 
 custom:
   webpack:
     webpackConfig: 'webpack.config.js'
     includeModules: true
-    dotenvVars: ${file(configs.js)}
+  autoswagger:
+    typefiles: ['./src/types/product.types.ts', './src/types/api.types.ts']
+  serverless-offline:
+    noPrependStageInUrl: true
 
 functions:
   getProductById:
@@ -36,20 +37,10 @@ functions:
             parameters:
               paths:
                 productId: true
-  getAllProducts:
-    handler: handler.getAllProducts
+  getProductsList :
+    handler: handler.getProductsList 
     events:
       - http:
           path: products
           method: get
           cors: true
-  createProduct:
-    handler: handler.createProduct
-    events:
-      - http:
-          path: products
-          method: post
-          cors: true
-          request:
-              schema:
-                application/json: ${file(src/schemas/createProductSchema.json)}

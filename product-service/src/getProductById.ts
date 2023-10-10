@@ -1,26 +1,24 @@
-import { ProductServiceInterface } from "./services/products";
+import { getProductById as getProductByIdService } from "./services/products";
 import { winstonLogger } from "./utils/winstonLogger";
-import { errorResponse, successResponse } from "./utils/apiResponseBuilder";
+import { errorResponse, successResponse, ResponseInterface } from "./utils/apiResponseBuilder";
 
-export const getProductByIdHandler = (productService: ProductServiceInterface) => async (event, _context) => {
+export const getProductById: (event:any, _context:any) => Promise<ResponseInterface> = async (event, _context) => {
     try {
         winstonLogger.logRequest(`Incoming event: ${ JSON.stringify( event ) }`);
 
         const { productId = '' } = event.pathParameters;
 
-        console.log(productService);
-
-        const product = await productService.getProductById( productId );
+        const product = getProductByIdService( productId );
 
         winstonLogger.logRequest(`"Received product with id: ${ productId }: ${ JSON.stringify( product ) }`);
         
         if( product )
-            return successResponse( { product } );
+            return successResponse( product  );
 
 
-        return successResponse( { message: "Product not found" }, 404 );
+        return successResponse( { message: "Product not found!!!" }, 404 );
     }
-    catch ( err ) {
+    catch ( err:any ) {
         return errorResponse( err );
     }
 }
