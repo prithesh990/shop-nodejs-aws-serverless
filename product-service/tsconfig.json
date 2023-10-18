@@ -1,4 +1,3 @@
-
 {
   "compilerOptions": {
     "target": "es2020",
@@ -11,6 +10,7 @@
       "@mocks/*": ["src/mocks/*"],
       "custom-module-type": ["src/types/custom-module-type"]
     },
+    
   
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -27,5 +27,5 @@
   
     "outDir": "lib",
     "resolveJsonModule": true
-  },"ts-node": {"files":true}
+  },"ts-node": {"files":true},
 }

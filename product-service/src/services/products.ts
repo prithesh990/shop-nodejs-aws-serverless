@@ -1,17 +1,21 @@
-
-import products from '../mocks/products.json';
+import products from "../mocks/products.json";
 
 export interface ProductInterface {
-    id: string,
-    title: string,
-    description: string,
-    price: number,
-    logo: string,
-    count: number
+  id?: string;
+  title: string;
+  description: string;
+  price: number;
+  logo: string;
+  count: number;
 }
 
-export const getProductById = (id: string): ProductInterface | undefined => {
-    const foundProduct = products.find(product => product.id === id);
-    return foundProduct; // This can be either a ProductInterface or undefined
-};
-export const getAllProducts = (): ProductInterface[] => products;
+export interface ProductServiceInterface {
+  getProductById: (id: string) => Promise<ProductInterface>;
+  getAllProducts: () => Promise<ProductInterface[]>;
+  createProduct: (
+    product: Pick<
+      ProductInterface,
+      "title" | "description" | "price" | "logo" | "count"
+    >
+  ) => Promise<ProductInterface>;
+}

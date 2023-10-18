@@ -2,6 +2,8 @@ org: pithesh
 app: product-service
 service: product-service
 frameworkVersion: '3'
+useDotenv: true
+
 
 provider:
   name: aws
@@ -9,12 +11,36 @@ provider:
   region: us-east-1
   httpApi:
     cors: true
-
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${sls:stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:us-east-1:*:table/${self:custom.tablesName.stocksTable}"
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:us-east-1:*:table/${self:custom.tablesName.productsTable}"
 
 plugins:
   - serverless-auto-swagger
   - serverless-webpack
   - serverless-offline
+  - serverless-dotenv-plugin
+  - serverless-esbuild
 
 custom:
   webpack:
@@ -24,10 +50,21 @@ custom:
     typefiles: ['./src/types/product.types.ts', './src/types/api.types.ts']
   serverless-offline:
     noPrependStageInUrl: true
+  tablesName:
+     productsTable: ${self:provider.environment.DYNAMODB_TABLE}-products
+     stocksTable: ${self:provider.environment.DYNAMODB_TABLE}-stocks
+  dotenv:
+    path: .env
+  esbuild:
+    platform: node
+    target: node18
 
 functions:
   getProductById:
     handler: handler.getProductById
+    environment:
+       productsTable: ${self:custom.tablesName.productsTable}
+       stocksTable: ${self:custom.tablesName.stocksTable}
     events:
       - http:
           path: products/{productId}
@@ -39,8 +76,51 @@ functions:
                 productId: true
   getProductsList :
     handler: handler.getProductsList 
+    environment:
+       productsTable: ${self:custom.tablesName.productsTable}
+       stocksTable: ${self:custom.tablesName.stocksTable}
     events:
       - http:
           path: products
           method: get
           cors: true
+  createProduct:
+    handler: handler.createProductHandler
+    environment:
+       productsTable: ${self:custom.tablesName.productsTable}
+       stocksTable: ${self:custom.tablesName.stocksTable}
+    events:
+      - http:
+          path: products
+          method: post
+          cors: true
+resources:
+  Resources:
+    ProductsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S  # Assuming 'id' is a string (UUID)
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH  # 'id' attribute as the hash key
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:custom.tablesName.productsTable} 
+    StocksDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: product_id
+            AttributeType: S  # Assuming 'product_id' is a string (UUID)
+        KeySchema:
+          -
+            AttributeName: product_id
+            KeyType: HASH  # 'product_id' attribute as the hash key
+        BillingMode: PAY_PER_REQUEST
+        TableName:  ${self:custom.tablesName.stocksTable}
