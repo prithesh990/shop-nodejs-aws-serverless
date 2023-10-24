@@ -47,7 +47,7 @@ custom:
     webpackConfig: 'webpack.config.js'
     includeModules: true
   autoswagger:
-    typefiles: ['./src/types/product.types.ts', './src/types/api.types.ts']
+    typefiles: ['./src/types/product.types.ts', './src/types/api.types.ts', './src/types/stock.types.ts',]
   serverless-offline:
     noPrependStageInUrl: true
   tablesName:
