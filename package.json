@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/EPAM-JS-Competency-center/shop-nodejs-aws-serverless/issues"
   },
-  "homepage": "https://github.com/EPAM-JS-Competency-center/shop-nodejs-aws-serverless#readme"
+  "homepage": "https://github.com/EPAM-JS-Competency-center/shop-nodejs-aws-serverless#readme",
+  "dependencies": {
+    "winston": "^3.3.3"
+  }
 }
