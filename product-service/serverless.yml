@@ -13,6 +13,8 @@ provider:
     cors: true
   environment:
     DYNAMODB_TABLE: ${self:service}-${sls:stage}
+    SNS_ARN: 
+       Ref: createProductTopic
   iam:
     role:
       statements:
@@ -34,6 +36,10 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
           Resource: "arn:aws:dynamodb:us-east-1:*:table/${self:custom.tablesName.productsTable}"
+        - Effect: "Allow"
+          Action:
+            - "sns:Publish"
+          Resource: "*"
 
 plugins:
   - serverless-auto-swagger
@@ -94,6 +100,19 @@ functions:
           path: products
           method: post
           cors: true
+  catalogBatchProcess:
+    handler: handler.catalogBatchProcess
+    environment:
+      productsTable: ${self:custom.tablesName.productsTable}
+      stocksTable: ${self:custom.tablesName.stocksTable}
+      topic: ${self:provider.environment.SNS_ARN}
+    events:
+      - sqs:
+          batchSize: 5
+          arn:
+            Fn::GetAtt:
+              - catalogItemsQueue
+              - Arn
 resources:
   Resources:
     ProductsDynamoDbTable:
@@ -124,3 +143,22 @@ resources:
             KeyType: HASH  # 'product_id' attribute as the hash key
         BillingMode: PAY_PER_REQUEST
         TableName:  ${self:custom.tablesName.stocksTable}
+    catalogItemsQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: catalogItemsQueue
+    createProductTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: createProductTopic
+        Subscription:
+          - Endpoint: ${env:EMAIL}
+            Protocol: email
+  Outputs:
+    catalogItemsQueue:
+      Value:
+        Fn::GetAtt:
+          - catalogItemsQueue
+          - Arn
+      Export: 
+        Name: sqsURL

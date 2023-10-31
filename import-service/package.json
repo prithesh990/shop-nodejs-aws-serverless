@@ -15,7 +15,7 @@
   "author": "JSCC",
   "license": "MIT",
   "dependencies": {
-    "aws-sdk": "^2.1479.0",
+    "aws-sdk": "^2.1484.0",
     "csv-parser": "^3.0.0",
     "winston": "^3.11.0"
   },

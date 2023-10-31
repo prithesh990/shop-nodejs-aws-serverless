@@ -11,3 +11,4 @@ export const getProductById = handlers.getProductById(productService);
 export const getProductsList = handlers.getProductsList(productService);
 export const createProductHandler =
   handlers.createProductHandler(productService);
+export const catalogBatchProcess = handlers.catalogBatchProcess(productService);
