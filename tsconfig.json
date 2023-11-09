@@ -1,17 +1,32 @@
+
 {
   "compilerOptions": {
-    "lib": ["es2017"],
-    "removeComments": true,
+    "target": "es2020",
+    "module": "es2020",
     "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "@interfaces/*": ["types/*"],
+      "@functions": ["handlers/index.ts"],
+      "@functions/*": ["handlers/*"],
+      "@mocks/*": ["mocks/*"],
+      "custom-module-type": ["types/custom-module-type"]
+    },
+  
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noImplicitAny": true,
+    "removeComments": true,
+
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "sourceMap": true,
-    "target": "es2017",
+  
     "outDir": "lib",
     "resolveJsonModule": true
-  },
-  "include": ["./**/*.ts", "product-service/configs.js", "product-service/configs.js"]
+  },"ts-node": {"files":true}
 }

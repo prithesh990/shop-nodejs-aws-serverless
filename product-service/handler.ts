@@ -1,13 +1,14 @@
-import * as handlers from './src';
-import { Client } from 'pg';
-import { PostgresProductService } from './src/services/postgres-memory-product-service';
+import ProductService from "./src/services/product.service";
+require("dotenv").config();
 
-console.log(process.env);
-
-const databaseClient = new Client();
-databaseClient.connect();
-const productService = new PostgresProductService(databaseClient)
-
-export const getProductById = handlers.getProductByIdHandler(productService);
-export const getAllProducts = handlers.getAllProductsHandler(productService);
-export const createProduct = handlers.createProductHandler(productService);
+import * as handlers from "./src";
+const { DynamoDB } = require("@aws-sdk/client-dynamodb");
+import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
+const dynamoDBClient = new DynamoDB({});
+const client = DynamoDBDocument.from(dynamoDBClient);
+const productService = new ProductService(client);
+export const getProductById = handlers.getProductById(productService);
+export const getProductsList = handlers.getProductsList(productService);
+export const createProductHandler =
+  handlers.createProductHandler(productService);
+export const catalogBatchProcess = handlers.catalogBatchProcess(productService);

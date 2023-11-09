@@ -1,32 +1,82 @@
+org: pithesh
+app: product-service
 service: product-service
-frameworkVersion: '2'
-variablesResolutionMode: 20210219
+frameworkVersion: '3'
+useDotenv: true
+
 
 provider:
   name: aws
-  runtime: nodejs12.x
-  stage: ${opt:stage, 'dev'}
+  runtime: nodejs18.x
   region: us-east-1
+  httpApi:
+    cors: true
   environment:
-    ENV_STAGE: ${opt:stage, 'dev'}
-    PGHOST: ${self:custom.dotenvVars.PGHOST, env:PGHOST, ''}
-    PGUSER: ${self:custom.dotenvVars.PGUSER, env:PGUSER, ''}
-    PGDATABASE: ${self:custom.dotenvVars.PGDATABASE, env:PGDATABASE, ''}
-    PGPASSWORD: ${self:custom.dotenvVars.PGPASSWORD, env:PGPASSWORD, ''}
-    PGPORT: ${self:custom.dotenvVars.PGPORT, env:PGPORT, ''}
+    DYNAMODB_TABLE: ${self:service}-${sls:stage}
+    SNS_ARN: 
+       Ref: createProductTopic
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:us-east-1:*:table/${self:custom.tablesName.stocksTable}"
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:us-east-1:*:table/${self:custom.tablesName.productsTable}"
+        - Effect: Allow
+          Action: 
+            - sqs:ReceiveMessage
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+            - "sns:Publish"
+          Resource: "*"
 
 plugins:
+  - serverless-auto-swagger
   - serverless-webpack
+  - serverless-offline
+  - serverless-dotenv-plugin
+  - serverless-esbuild
 
 custom:
   webpack:
     webpackConfig: 'webpack.config.js'
     includeModules: true
-    dotenvVars: ${file(configs.js)}
+  autoswagger:
+    typefiles: ['./src/types/product.types.ts', './src/types/api.types.ts', './src/types/stock.types.ts',]
+  serverless-offline:
+    noPrependStageInUrl: true
+  tablesName:
+     productsTable: ${self:provider.environment.DYNAMODB_TABLE}-products
+     stocksTable: ${self:provider.environment.DYNAMODB_TABLE}-stocks
+  dotenv:
+    path: .env
+  esbuild:
+    platform: node
+    target: node18
+    exclude:
+      - ""
 
 functions:
   getProductById:
     handler: handler.getProductById
+    environment:
+       productsTable: ${self:custom.tablesName.productsTable}
+       stocksTable: ${self:custom.tablesName.stocksTable}
     events:
       - http:
           path: products/{productId}
@@ -36,20 +86,86 @@ functions:
             parameters:
               paths:
                 productId: true
-  getAllProducts:
-    handler: handler.getAllProducts
+  getProductsList :
+    handler: handler.getProductsList 
+    environment:
+       productsTable: ${self:custom.tablesName.productsTable}
+       stocksTable: ${self:custom.tablesName.stocksTable}
     events:
       - http:
           path: products
           method: get
           cors: true
   createProduct:
-    handler: handler.createProduct
+    handler: handler.createProductHandler
+    environment:
+       productsTable: ${self:custom.tablesName.productsTable}
+       stocksTable: ${self:custom.tablesName.stocksTable}
     events:
       - http:
           path: products
           method: post
           cors: true
-          request:
-              schema:
-                application/json: ${file(src/schemas/createProductSchema.json)}
+  catalogBatchProcess:
+    handler: handler.catalogBatchProcess
+    environment:
+      productsTable: ${self:custom.tablesName.productsTable}
+      stocksTable: ${self:custom.tablesName.stocksTable}
+      topic: ${self:provider.environment.SNS_ARN}
+    events:
+      - sqs:
+          batchSize: 5
+          maximumBatchingWindow: 10
+          arn:
+            Fn::GetAtt:
+              - catalogItemsQueue
+              - Arn
+resources:
+  Resources:
+    ProductsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S  # Assuming 'id' is a string (UUID)
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH  # 'id' attribute as the hash key
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:custom.tablesName.productsTable} 
+    StocksDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: product_id
+            AttributeType: S  # Assuming 'product_id' is a string (UUID)
+        KeySchema:
+          -
+            AttributeName: product_id
+            KeyType: HASH  # 'product_id' attribute as the hash key
+        BillingMode: PAY_PER_REQUEST
+        TableName:  ${self:custom.tablesName.stocksTable}
+    catalogItemsQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: catalogItemsQueue
+    createProductTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: createProductTopic
+        Subscription:
+          - Endpoint: ${env:EMAIL}
+            Protocol: email
+  Outputs:
+    catalogItemsQueue:
+      Value:
+        Fn::GetAtt:
+          - catalogItemsQueue
+          - Arn
+      Export: 
+        Name: sqsURL

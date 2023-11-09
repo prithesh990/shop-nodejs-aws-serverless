@@ -1,4 +1,5 @@
-export { getProductByIdHandler } from './getProductById';
-export { getAllProductsHandler } from './getAllProducts';
-export { createProductHandler } from './createProduct';
-
+require("dotenv").config();
+export { getProductById } from "./getProductById";
+export { createProductHandler } from "./createProduct";
+export { getProductsList } from "./getProductsList";
+export { catalogBatchProcess } from "./catalogBatchProcess";

@@ -1,50 +1,91 @@
+org: pithesh
 service: import-service
-frameworkVersion: '2'
-variablesResolutionMode: 20210219
-
+frameworkVersion: '3'
+useDotenv: true
 
 provider:
   name: aws
-  runtime: nodejs12.x
-  stage: ${opt:stage, 'dev'}
+  runtime: nodejs18.x
   region: us-east-1
+  httpApi:
+    cors: true
+  environment:
+    SQS_URL:
+      Fn::ImportValue: "sqsURL"
 
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action: "s3:ListBucket"
-      Resource:
-        - "arn:aws:s3:::node-in-aws-cloud-catalogs"
-    - Effect: "Allow"
-      Action:
-        - "s3:*"
-      Resource:
-        - "arn:aws:s3:::node-in-aws-cloud-catalogs/*"
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+             - "s3:GetObject"
+             - "s3:PutObject"
+             - "s3:DeleteObject"
+             - "s3:HeadObject"
+             - "s3:CopyObject"
+          Resource: "arn:aws:s3:::${self:custom.bucket}/*"
+        - Effect: "Allow"
+          Action:
+            - "sqs:GetQueueUrl"
+            - "sqs:SendMessage"
+          Resource: "*"
+        - Effect: "Allow"
+          Action: 
+             - cloudformation:DescribeChangeSet
+             - cloudformation:DescribeStackResources
+          Resource: "*"
 
 plugins:
+  - serverless-auto-swagger
   - serverless-webpack
+  - serverless-offline
+  - serverless-dotenv-plugin
+  - serverless-esbuild
 
 custom:
   webpack:
     webpackConfig: 'webpack.config.js'
     includeModules: true
-    dotenvVars: ${file(configs.js)}
+  autoswagger:
+    typefiles: ['./src/types/api.types.ts']
+  serverless-offline:
+    noPrependStageInUrl: true
+  dotenv:
+    path: .env
+  esbuild:
+    platform: node
+    target: node18  
+    exclude:
+      - ""
+  bucket: ${env:BUCKET}
+
+    
 
 functions:
   importProductsFile:
     handler: handler.importProductsFile
     events:
       - http:
-          path: import
+          path: /import
           method: get
           cors: true
           request:
             parameters:
               querystrings:
                 name: true
-
+    environment:
+        BUCKET: ${self:custom.bucket}
+       
   importFileParser:
     handler: handler.importFileParser
+    events:
       - s3:
-          bucket: uploaded
+          bucket: ${self:custom.bucket}
           event: s3:ObjectCreated:*
+          rules:
+            - prefix: uploaded/
+            - suffix: .csv
           existing: true
+    environment:
+      queue: ${self:provider.environment.SQS_URL}
