@@ -15,6 +15,9 @@
   "author": "JSCC",
   "license": "MIT",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.441.0",
+    "@aws-sdk/client-sqs": "^3.441.0",
+    "@aws-sdk/s3-request-presigner": "^3.441.0",
     "aws-sdk": "^2.1484.0",
     "csv-parser": "^3.0.0",
     "winston": "^3.11.0"

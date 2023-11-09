@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { errorResponse, successResponse } from "./utils/apiResponseBuilder";
-import { S3 } from "aws-sdk";
+import { S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrlPromise } from "./utils/helper";
 
 const BUCKET: string = process.env.BUCKET || "";
 
@@ -11,7 +12,7 @@ export interface EventRecord {
 }
 
 export interface ImportProductsFileProps {
-  s3: S3;
+  s3: S3Client;
 }
 
 export const importProductsFile =
@@ -22,15 +23,7 @@ export const importProductsFile =
         event.queryStringParameters as EventRecord["queryStringParameters"];
       const catalogName = queryStringParameters.name;
       const catalogPath = `uploaded/${catalogName}`;
-
-      const params = {
-        Bucket: BUCKET,
-        Key: catalogPath,
-        Expires: 60,
-        ContentType: "text/csv",
-      };
-
-      const url = await s3.getSignedUrlPromise("putObject", params);
+      const url = await getSignedUrlPromise(s3, BUCKET, catalogPath, 60);
 
       return successResponse(url);
     } catch (error: any) {

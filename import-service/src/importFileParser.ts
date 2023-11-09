@@ -1,92 +1,66 @@
 import csv from "csv-parser";
-import { S3, SQS } from "aws-sdk";
-import util from "util";
-import stream from "stream";
+
 import { LoggerInterface } from "./utils/winstonLogger";
-import { error } from "console";
+import {
+  getS3ObjectStream,
+  moveS3Objects,
+  sqsSendMessage,
+} from "./utils/helper";
 
-const BUCKET: string = process.env.BUCKET || "";
-const finished = util.promisify(stream.finished);
-
-interface EventRecord {
-  s3: {
-    object: {
-      key: string;
-    };
-  };
-}
-
+import {
+  GetQueueUrlCommand,
+  SQSClient,
+  SendMessageCommand,
+} from "@aws-sdk/client-sqs";
+import { S3Client } from "@aws-sdk/client-s3";
+const parser = csv({ separator: "," });
 interface ImportFileParserProps {
-  s3: S3;
-  sqs: SQS;
+  s3: S3Client;
+  sqs: SQSClient;
   logger: LoggerInterface;
 }
 
 export const importFileParser =
   ({ s3, sqs, logger }: ImportFileParserProps) =>
   async (event: any) => {
-    const results: any = [];
-    for (const record of event.Records) {
-      const fileName = record.s3.object.key;
-      const s3Stream = s3
-        .getObject({
-          Bucket: BUCKET,
-          Key: record.s3.object.key,
+    try {
+      const BUCKET = event.Records[0].s3.bucket.name;
+      const encodedKey = event.Records[0].s3.object.key.replace(/\+/g, " ");
+      const key = decodeURIComponent(encodedKey);
+      const params = {
+        QueueName: process.env.SQS_URL?.split(":").pop(), // Extracts the queue name from the ARN
+      };
+      const command = new GetQueueUrlCommand(params);
+      const data = await sqs.send(command);
+      const queueUrl = data.QueueUrl;
+      const s3Stream = await getS3ObjectStream(s3, BUCKET, key);
+
+      s3Stream
+        .pipe(parser)
+        .on("data", async (data: any) => {
+          const messageBody = JSON.stringify(data);
+          console.log(queueUrl);
+          if (messageBody) {
+            await sqsSendMessage(sqs, queueUrl, messageBody, logger);
+          } else {
+            console.log("Recived empty jsonData");
+          }
         })
-        .createReadStream();
 
-      await finished(
-        s3Stream
-          .pipe(csv())
-          .on("data", (data: any) => {
-            // logger.logRequest(JSON.stringify(data));
-
-            results.push(data);
-          })
-          .on("end", async () => {
-            logger.logRequest(`Copy from ${BUCKET}/${record.s3.object.key}`);
-            const destinationKey = record.s3.object.key.replace(
-              "uploaded",
-              "parsed"
-            );
-
-            // Copy the object to the parsed folder
-            await s3
-              .copyObject({
-                Bucket: BUCKET,
-                CopySource: `${BUCKET}/${record.s3.object.key}`,
-                Key: destinationKey,
-              })
-              .promise();
-
-            logger.logRequest(`Copied into ${BUCKET}/${destinationKey}`);
-
-            // Delete the object from the uploaded folder
-
-            await s3
-              .deleteObject({
-                Bucket: BUCKET,
-                Key: record.s3.object.key,
-              })
-              .promise();
-            logger.logRequest(`Deleted from ${BUCKET}/${record.s3.object.key}`);
-
-            results.forEach((item: any) => {
-              sqs.sendMessage(
-                {
-                  QueueUrl: process.env.SQS_URL || "",
-                  MessageBody: JSON.stringify(item),
-                },
-                (error, data) => {
-                  if (error) {
-                    logger.logError(`Error for send to SQS: ${error}`);
-                  } else {
-                    logger.logRequest(`Message was sent to SQS: ${data}`);
-                  }
-                }
-              );
-            });
-          })
-      );
+        .on("end", async () => {
+          const [folder, filename] = encodedKey.split("/");
+          await moveS3Objects(
+            s3,
+            BUCKET,
+            folder,
+            "parsed",
+            decodeURIComponent(filename)
+          );
+        })
+        .on("error", (error: any) => {
+          console.error("Error reading CSV file:", error.message);
+        });
+    } catch (err) {
+      console.log(err);
     }
   };

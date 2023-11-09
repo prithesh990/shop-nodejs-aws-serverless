@@ -36,6 +36,10 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
           Resource: "arn:aws:dynamodb:us-east-1:*:table/${self:custom.tablesName.productsTable}"
+        - Effect: Allow
+          Action: 
+            - sqs:ReceiveMessage
+          Resource: "*"
         - Effect: "Allow"
           Action:
             - "sns:Publish"
@@ -64,6 +68,8 @@ custom:
   esbuild:
     platform: node
     target: node18
+    exclude:
+      - ""
 
 functions:
   getProductById:
@@ -109,6 +115,7 @@ functions:
     events:
       - sqs:
           batchSize: 5
+          maximumBatchingWindow: 10
           arn:
             Fn::GetAtt:
               - catalogItemsQueue
