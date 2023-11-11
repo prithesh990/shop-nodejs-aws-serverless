@@ -1,0 +1,37 @@
+org: pithesh
+service: authorization-service
+frameworkVersion: '3'
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  httpApi:
+    cors: true
+
+plugins:
+  - serverless-webpack
+  - serverless-offline
+  - serverless-dotenv-plugin
+  - serverless-esbuild
+
+custom:
+  webpack:
+    webpackConfig: 'webpack.config.js'
+    includeModules: true
+  serverless-offline:
+    noPrependStageInUrl: true
+  dotenv:
+    path: .env
+  esbuild:
+    platform: node
+    target: node18  
+    exclude:
+      - ""
+
+    
+
+functions:
+   basicAuthorizer:
+    handler: handler.basicAuthorizer

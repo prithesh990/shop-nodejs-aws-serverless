@@ -1,0 +1,42 @@
+{
+  "name": "authorization-service",
+  "version": "1.0.0",
+  "description": "Authorization Service created API Gateway and Lambdas",
+  "main": "handler.ts",
+  "scripts": {
+    "package-build": "sls package",
+    "offline": "sls offline start ",
+    "deploy:dev": "sls deploy --stage dev",
+    "deploy:prod": "sls deploy --stage prod",
+    "remove:dev-stack": "sls remove --stage dev --region us-east-1",
+    "remove:prod-stack": "sls remove --stage prod --region us-east-1",
+    "test": "jest"
+  },
+  "author": "JSCC",
+  "license": "MIT",
+  "dependencies": {
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@serverless/typescript": "^3.0.0",
+    "@types/node": "^14.14.25",
+    "@types/aws-lambda": "^8.10.71",
+    "esbuild": "^0.14.11",
+    "json-schema-to-ts": "^1.5.0",
+    "serverless": "^3.0.0",
+    "serverless-dotenv-plugin": "^6.0.0",
+    "serverless-esbuild": "^1.23.3",
+    "serverless-webpack": "^5.13.0",
+    "serverless-offline": "^13.2.0",
+    "serverless-prune-versions": "^1.0.4",
+    "ts-node": "^10.4.0",
+    "ts-loader": "^9.5.0",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^4.1.3",
+    "dotenv": "^16.3.1",
+    "tsconfig-paths-webpack-plugin": "^4.1.0",
+    "webpack-node-externals": "^3.0.0",
+    "webpack": "^5.89.0"
+    
+  }
+}

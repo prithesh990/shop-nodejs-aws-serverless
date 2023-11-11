@@ -74,6 +74,15 @@ functions:
             parameters:
               querystrings:
                 name: true
+          authorizer:
+            name: basicAuthorizer
+            arn: "arn:aws:lambda:us-east-1:827049202004:function:authorization-service-dev-basicAuthorizer"
+            type: "request"
+            resultTtlInSeconds: 0
+            identityValidationExpression: ".*"
+            identitySource: "method.request.header.Authorization"
+            
+          
     environment:
         BUCKET: ${self:custom.bucket}
        
